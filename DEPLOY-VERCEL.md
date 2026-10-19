@@ -35,7 +35,13 @@ Sau khi bắt đầu quản trị trên Vercel, coi **Turso là dữ liệu chí
 
 Giữ an toàn tệp ENV và khóa đọc ảnh cùng bản sao lưu. Khóa đọc ảnh không thể tự tạo lại nếu đã mất. Khi cần khôi phục cloud, tạo database mới, phục hồi dữ liệu đã xuất sau khi đối chiếu, rồi đổi URL/token của Vercel; không ghi đè database đang hoạt động.
 
-## Token và vận hành
+## Sitemap và Google Search Console
+
+Sitemap XML công khai tại `https://www.hoatuoiiapa.shop/sitemap.xml`. API tạo danh sách mới từ Turso mỗi lần truy cập: trang chủ, danh mục, giới thiệu, liên hệ và chi tiết các mẫu đang hiển thị; không chứa trang quản trị/API hoặc mẫu ẩn. Ngày cập nhật mẫu lấy từ dữ liệu, không tự gán ngày hôm nay cho mọi URL. `robots.txt` đã khai báo sitemap. Không cần thêm ENV.
+
+Sau khi xác minh tên miền trong Search Console, mở **Sơ đồ trang web**, nhập toàn bộ URL sitemap trên và bấm **Gửi**. Không dùng HTML trang chủ làm sitemap. Khi thêm/sửa đường dẫn/ẩn/xóa mẫu hoa, sitemap tự đổi theo database, không cần deploy lại.
+
+## Token và vận hành cloud
 
 Token database cấp lúc chuyển có thời hạn **180 ngày**. Trước khi hết hạn, tạo token đọc/ghi mới cho **cùng database**, cập nhật `TURSO_AUTH_TOKEN` trên Vercel và cấu hình local, redeploy, kiểm tra `/api/products` và đăng nhập. Platform API Token không cần đưa lên Vercel.
 

@@ -1,5 +1,11 @@
 # Kết quả kiểm tra bàn giao — 19/10/2026
 
+## Bổ sung sitemap XML
+
+- `/sitemap.xml` trả `application/xml; charset=utf-8`, không cache; dùng URL chuẩn `https://www.hoatuoiiapa.shop` và dữ liệu hiện tại từ database. `robots.txt` khai báo sitemap, Vercel rewrite đi vào API trước SPA fallback.
+- Chỉ gồm 4 trang tĩnh và chi tiết mẫu đang hiển thị. Đã kiểm tra đổi slug, ẩn, xóa, database trống, XML escaping, ngày cập nhật không hợp lệ, không lộ nguồn ảnh/ghi chú hoặc lấy domain từ Host tùy ý.
+- Build/TypeScript, lint, 22/22 kiểm thử và diff check đạt. Không sửa dữ liệu vận hành.
+
 ## Sửa ảnh giữ chỗ ở lần tải đầu
 
 - Bỏ ảnh template `hero-slide-1.webp` khỏi trang chủ và phần giới thiệu. Khi dữ liệu/ảnh đang tải, hiện trạng thái tải trong khung cố định; chỉ hiện ảnh hoa sau `onLoad`. Có trạng thái trống và nút thử lại nếu tải ảnh lỗi.

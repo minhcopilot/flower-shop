@@ -19,6 +19,7 @@ import {
   type CloudAdapter,
 } from "./cloud-storage.js";
 import type { StorageStatus } from "../shared/storage.js";
+import { buildSitemap } from "./sitemap.js";
 import { openDatabase, checkPassword } from "./db.js";
 import {
   products,
@@ -109,6 +110,10 @@ export function buildApp(
     next();
   });
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
+  app.get("/sitemap.xml", async (_req, res) => {
+    res.set("Cache-Control", "no-store");
+    res.type("application/xml").send(buildSitemap(await products(db)));
+  });
   app.get("/api/categories", async (_req, res) =>
     res.json(await categories(db)),
   );
