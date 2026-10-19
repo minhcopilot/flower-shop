@@ -28,6 +28,9 @@ backups/
 .serena/
 .upstream/
 .env
+.env.*
+!.env.example
+.vercel/
 test-results/
 playwright-report/
 artifacts/

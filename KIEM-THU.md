@@ -46,6 +46,18 @@ Database, ảnh và phiên đăng nhập tồn tại sau khi đóng/mở lại d
 - Kiểm tra chiều rộng 375/768/1440 px không cuộn ngang; CSP cho phép iframe từ `https://www.google.com`. Build/TypeScript, lint, 15/15 kiểm thử đạt sau thay đổi.
 - Ảnh kiểm tra: `artifacts/contact-map-1440.jpg`, `artifacts/contact-admin-375.jpg`. Chưa thực hiện cuộc gọi hoặc gửi tin nhắn Zalo/Facebook.
 
-## Giới hạn bàn giao local
+## Bổ sung Turso và Vercel
+
+- Đã chuyển 1 tài khoản chủ shop (mật khẩu băm), 7 danh mục, 10 mẫu hoa, 16 bản ghi media lên Turso. Đối chiếu từng hàng của bốn bảng với SQLite: khớp. Bao gồm mẫu do chủ shop bổ sung; không xóa hoặc đổi dữ liệu shop.
+- Có 12 ảnh đang được dùng trong các mẫu: backend serverless đọc từ UploadThing, giải mã bằng ENV, so sánh SHA-256 với ảnh local, 12/12 khớp. Không dùng fallback ảnh local trong phép kiểm tra này. Ảnh chưa được dùng không tính trong thống kê dashboard.
+- Kiểm tra trực tiếp handler Vercel với Turso thật: API quản trị chưa đăng nhập trả 401, đăng nhập tài khoản hiện có thành công, đọc dữ liệu/ảnh, đăng xuất thu hồi phiên. Báo cáo không chứa bí mật ở `artifacts/turso-live-check.json`.
+- 20/20 kiểm thử tự động đạt: giữ 15 kiểm thử cũ, thêm migration chạy lại/không ghi đè/không chép phiên, phiên Secure dùng chung qua nhiều instance, CRUD và upload cloud không ghi file, ẩn ảnh, lỗi cloud trả 502, CSRF, giới hạn đăng nhập dùng chung và ENV thiếu/sai.
+- Đã chọn ảnh PNG thử 6.763.537 byte từ trình duyệt, tối ưu trước khi gửi và upload UploadThing thành công; ảnh WebP lưu được 1.568.098 byte. Hủy form và dọn riêng tệp thử. Không tạo mẫu hoa thử trên Turso.
+- Build/TypeScript, lint, audit (0 lỗ hổng) và kiểm tra whitespace đạt. Bản local đã chạy lại, vẫn dùng SQLite độc lập.
+- Bản sao lưu trước chuyển: `backups/iapa-2026-10-19T01-29-19-983Z-4b4b54`; đã xuất snapshot Turso trong `backups/turso-1792373625179.json`. Không khôi phục đè dữ liệu đang chạy để thử.
+- `data/vercel.env` chứa đủ biến môi trường riêng, không vào Git. Cấu hình deploy và giới hạn xem `DEPLOY-VERCEL.md`.
+- Chưa chạy build trên hạ tầng Vercel hoặc xác nhận URL deployment public; cần import ENV, deploy commit mới và kiểm tra URL thực tế.
+
+## Giới hạn bàn giao sau chuyển cloud
 
 Bản bàn giao chạy local tại cổng 4317, chưa triển khai Internet. Chưa kiểm tra trên thiết bị điện thoại vật lý hoặc thao tác gọi điện thực tế. Chưa tự động đồng bộ Facebook, không có đơn hàng/thanh toán. Các danh mục giỏ hoa/kệ hoa/khai trương chưa được điền sản phẩm suy đoán; chủ shop bổ sung qua quản trị.

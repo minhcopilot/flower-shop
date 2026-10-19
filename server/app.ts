@@ -19,14 +19,16 @@ import {
   type CloudAdapter,
 } from "./cloud-storage.js";
 import type { StorageStatus } from "../shared/storage.js";
+import { openDatabase, checkPassword } from "./db.js";
 import {
-  openDatabase,
   products,
   categories,
   saveProduct,
-  checkPassword,
-  SqliteSessionStore,
-} from "./db.js";
+  localQueries,
+  DatabaseSessionStore,
+  DatabaseRateLimitStore,
+  type QueryDatabase,
+} from "./persistence.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -49,11 +51,21 @@ export function createApp(
   storage: CloudAdapter = createUploadThingAdapter(directory),
 ) {
   const db = openDatabase(directory);
+  const app = buildApp(localQueries(db), directory, storage);
+  return { app, db };
+}
+export function buildApp(
+  db: QueryDatabase,
+  directory: string,
+  storage: CloudAdapter,
+  serverless = false,
+) {
   const secretPath = path.join(directory, "session-secret");
-  if (!existsSync(secretPath))
+  if (!serverless && !process.env.SESSION_SECRET && !existsSync(secretPath))
     writeFileSync(secretPath, randomBytes(48).toString("hex"), { mode: 0o600 });
   const app = express();
   app.disable("x-powered-by");
+  if (serverless) app.set("trust proxy", 1);
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -71,14 +83,14 @@ export function createApp(
   app.use(
     session({
       name: "iapa.sid",
-      secret: readFileSync(secretPath, "utf8"),
-      store: new SqliteSessionStore(db),
+      secret: process.env.SESSION_SECRET || readFileSync(secretPath, "utf8"),
+      store: new DatabaseSessionStore(db),
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         sameSite: "strict",
-        secure: false,
+        secure: serverless,
         maxAge: 8 * 60 * 60 * 1000,
       },
     }),
@@ -97,16 +109,20 @@ export function createApp(
     next();
   });
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
-  app.get("/api/categories", (_req, res) => res.json(categories(db)));
-  app.get("/api/products", (_req, res) =>
+  app.get("/api/categories", async (_req, res) =>
+    res.json(await categories(db)),
+  );
+  app.get("/api/products", async (_req, res) =>
     res.json(
-      products(db)
+      (await products(db))
         .filter((p) => p.visible)
         .map(({ sourceUrl: _source, draftNote: _draft, ...p }) => p),
     ),
   );
-  app.get("/api/products/:slug", (req, res) => {
-    const p = products(db).find((p) => p.visible && p.slug === req.params.slug);
+  app.get("/api/products/:slug", async (req, res) => {
+    const p = (await products(db)).find(
+      (p) => p.visible && p.slug === req.params.slug,
+    );
     if (!p) fail(404, "Không tìm thấy mẫu hoa.");
     const { sourceUrl: _source, draftNote: _draft, ...publicProduct } = p!;
     res.json(publicProduct);
@@ -117,6 +133,7 @@ export function createApp(
   app.post(
     "/api/auth/login",
     rateLimit({
+      ...(serverless ? { store: new DatabaseRateLimitStore(db) } : {}),
       windowMs: 15 * 60 * 1000,
       limit: 10,
       standardHeaders: "draft-8",
@@ -125,13 +142,13 @@ export function createApp(
         error: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau 15 phút.",
       },
     }),
-    (req, res, next) => {
+    async (req, res, next) => {
       const value = z
         .object({ username: z.string().max(80), password: z.string().max(200) })
         .parse(req.body);
-      const admin = db
+      const admin = (await db
         .prepare("SELECT username,password FROM admin WHERE id=1")
-        .get() as { username: string; password: string } | undefined;
+        .get()) as { username: string; password: string } | undefined;
       if (!admin)
         fail(
           503,
@@ -163,19 +180,21 @@ export function createApp(
       ? next()
       : next(new HttpError(401, "Vui lòng đăng nhập để quản trị.")),
   );
-  app.get("/api/admin/products", (_req, res) => res.json(products(db)));
+  app.get("/api/admin/products", async (_req, res) =>
+    res.json(await products(db)),
+  );
   type MediaRow = {
     id: string;
     filename: string;
     appId: string | null;
     fileKey: string | null;
   };
-  function storageStatus(): StorageStatus {
+  async function storageStatus(): Promise<StorageStatus> {
     const config = loadCloudConfig(directory);
-    const usedIds = new Set(products(db).flatMap((p) => p.images));
-    const used = (db.prepare("SELECT * FROM media").all() as MediaRow[]).filter(
-      (m) => usedIds.has(m.id),
-    );
+    const usedIds = new Set((await products(db)).flatMap((p) => p.images));
+    const used = (
+      (await db.prepare("SELECT * FROM media").all()) as MediaRow[]
+    ).filter((m) => usedIds.has(m.id));
     return {
       configured: !!config,
       appId: (config ? tokenAppId(config.token) : null) || "",
@@ -184,10 +203,12 @@ export function createApp(
       pendingIds: used.filter((m) => !m.fileKey).map((m) => m.id),
     };
   }
-  app.get("/api/admin/storage", (_req, res) => res.json(storageStatus()));
+  app.get("/api/admin/storage", async (_req, res) =>
+    res.json(await storageStatus()),
+  );
   app.put("/api/admin/storage", async (req, res) => {
     const config = cloudConfigSchema.parse(req.body);
-    const otherCloud = db
+    const otherCloud = await db
       .prepare(
         "SELECT id FROM media WHERE fileKey IS NOT NULL AND appId != ? LIMIT 1",
       )
@@ -199,39 +220,43 @@ export function createApp(
       );
     await storage.verify(config);
     saveCloudConfig(directory, config);
-    res.json(storageStatus());
+    res.json(await storageStatus());
   });
   app.post("/api/admin/storage/migrate", async (req, res) => {
     const { id } = z.object({ id: z.string().uuid() }).strict().parse(req.body);
     const config = loadCloudConfig(directory);
     if (!config) fail(409, "Vui lòng kết nối UploadThing trước.");
-    const media = db.prepare("SELECT * FROM media WHERE id=?").get(id) as
-      MediaRow | undefined;
-    if (!media || !products(db).some((p) => p.images.includes(id)))
+    const media = (await db
+      .prepare("SELECT * FROM media WHERE id=?")
+      .get(id)) as MediaRow | undefined;
+    if (!media || !(await products(db)).some((p) => p.images.includes(id)))
       fail(404, "Không tìm thấy ảnh đang được sử dụng.");
     if (!media!.fileKey) {
+      if (serverless)
+        fail(
+          409,
+          "Ảnh local cần được chuyển từ máy đang giữ ảnh trước khi deploy.",
+        );
       const bytes = readFileSync(
         path.join(directory, "uploads", media!.filename),
       );
       const fileKey = await storage.upload(bytes, id, config!);
-      db.prepare("UPDATE media SET appId=?,fileKey=? WHERE id=?").run(
-        tokenAppId(config!.token),
-        fileKey,
-        id,
-      );
+      await db
+        .prepare("UPDATE media SET appId=?,fileKey=? WHERE id=?")
+        .run(tokenAppId(config!.token), fileKey, id);
     }
-    res.json(storageStatus());
+    res.json(await storageStatus());
   });
-  app.post("/api/admin/categories", (req, res) => {
+  app.post("/api/admin/categories", async (req, res) => {
     const v = categorySchema.parse(req.body);
-    const r = db
+    const r = await db
       .prepare("INSERT INTO categories(name,kind) VALUES(?,?)")
       .run(v.name, v.kind);
     res.status(201).json({ ...v, id: Number(r.lastInsertRowid) });
   });
-  app.put("/api/admin/categories/:id", (req, res) => {
+  app.put("/api/admin/categories/:id", async (req, res) => {
     const v = categorySchema.parse(req.body);
-    const r = db
+    const r = await db
       .prepare("UPDATE categories SET name=?,kind=? WHERE id=?")
       .run(
         v.name,
@@ -241,45 +266,42 @@ export function createApp(
     if (!r.changes) fail(404, "Không tìm thấy danh mục.");
     res.json({ ok: true });
   });
-  app.delete("/api/admin/categories/:id", (req, res) => {
+  app.delete("/api/admin/categories/:id", async (req, res) => {
     const id = z.coerce.number().int().positive().parse(req.params.id);
-    if (products(db).some((p) => p.categoryIds.includes(id)))
+    if ((await products(db)).some((p) => p.categoryIds.includes(id)))
       fail(
         409,
         "Danh mục đang có mẫu hoa. Hãy chuyển các mẫu sang danh mục khác trước.",
       );
-    const r = db.prepare("DELETE FROM categories WHERE id=?").run(id);
+    const r = await db.prepare("DELETE FROM categories WHERE id=?").run(id);
     if (!r.changes) fail(404, "Không tìm thấy danh mục.");
     res.json({ ok: true });
   });
-  function writeProduct(body: unknown, id?: number) {
-    if (id && !products(db).some((p) => p.id === id))
+  async function writeProduct(body: unknown, id?: number) {
+    if (id && !(await products(db)).some((p) => p.id === id))
       fail(404, "Không tìm thấy mẫu hoa.");
     const v = productSchema.parse(body);
-    const ids = new Set(categories(db).map((c) => c.id));
+    const ids = new Set((await categories(db)).map((c) => c.id));
     if (v.categoryIds.some((c) => !ids.has(c)))
       fail(400, "Danh mục không tồn tại.");
-    if (
-      v.images.some(
-        (i) => !db.prepare("SELECT id FROM media WHERE id=?").get(i),
-      )
-    )
-      fail(400, "Ảnh không tồn tại. Vui lòng tải ảnh lại.");
-    return saveProduct(db, v, id);
+    for (const imageId of v.images)
+      if (!(await db.prepare("SELECT id FROM media WHERE id=?").get(imageId)))
+        fail(400, "Ảnh không tồn tại. Vui lòng tải ảnh lại.");
+    return await saveProduct(db, v, id);
   }
-  app.post("/api/admin/products", (req, res) =>
-    res.status(201).json({ id: writeProduct(req.body) }),
+  app.post("/api/admin/products", async (req, res) =>
+    res.status(201).json({ id: await writeProduct(req.body) }),
   );
-  app.put("/api/admin/products/:id", (req, res) =>
+  app.put("/api/admin/products/:id", async (req, res) =>
     res.json({
-      id: writeProduct(
+      id: await writeProduct(
         req.body,
         z.coerce.number().int().positive().parse(req.params.id),
       ),
     }),
   );
-  app.delete("/api/admin/products/:id", (req, res) => {
-    const r = db
+  app.delete("/api/admin/products/:id", async (req, res) => {
+    const r = await db
       .prepare("DELETE FROM products WHERE id=?")
       .run(z.coerce.number().int().positive().parse(req.params.id));
     if (!r.changes) fail(404, "Không tìm thấy mẫu hoa.");
@@ -331,27 +353,31 @@ export function createApp(
     }
     const config = loadCloudConfig(directory);
     const fileKey = config ? await storage.upload(bytes, id, config) : null;
-    writeFileSync(path.join(directory, "uploads", filename), bytes);
-    db.prepare(
-      "INSERT INTO media(id,filename,appId,fileKey) VALUES(?,?,?,?)",
-    ).run(
-      id,
-      filename,
-      (config ? tokenAppId(config.token) : null) || null,
-      fileKey,
-    );
+    if (serverless && !fileKey)
+      fail(503, "Chưa cấu hình UploadThing trên máy chủ.");
+    if (!serverless)
+      writeFileSync(path.join(directory, "uploads", filename), bytes);
+    await db
+      .prepare("INSERT INTO media(id,filename,appId,fileKey) VALUES(?,?,?,?)")
+      .run(
+        id,
+        filename,
+        (config ? tokenAppId(config.token) : null) || null,
+        fileKey,
+      );
     res.status(201).json({ id, storage: fileKey ? "uploadthing" : "local" });
   });
   app.get("/media/:id", async (req, res) => {
     const id = req.params.id;
     if (!z.string().uuid().safeParse(id).success)
       return fail(404, "Không tìm thấy ảnh.");
-    const media = db.prepare("SELECT * FROM media WHERE id=?").get(id) as
-      MediaRow | undefined;
+    const media = (await db
+      .prepare("SELECT * FROM media WHERE id=?")
+      .get(id)) as MediaRow | undefined;
     if (
       !media ||
       (!req.session.admin &&
-        !products(db).some((p) => p.visible && p.images.includes(id)))
+        !(await products(db)).some((p) => p.visible && p.images.includes(id)))
     )
       fail(404, "Không tìm thấy ảnh.");
     if (media!.fileKey) {
@@ -380,7 +406,7 @@ export function createApp(
     next(new HttpError(404, "Không tìm thấy chức năng.")),
   );
   const dist = path.resolve("dist");
-  if (existsSync(dist)) {
+  if (!serverless && existsSync(dist)) {
     app.use(express.static(dist));
     app.get("/{*splat}", (_req, res) =>
       res.sendFile(path.join(dist, "index.html")),
@@ -423,5 +449,5 @@ export function createApp(
       res.status(500).json({ error: "Không thể hoàn tất. Vui lòng thử lại." });
     },
   );
-  return { app, db };
+  return app;
 }

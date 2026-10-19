@@ -19,6 +19,7 @@ import {
 import CloudStorage from "./CloudStorage";
 import type { StorageStatus } from "../../shared/storage";
 import { api, mediaUrl } from "../lib/api";
+import { prepareUpload } from "../lib/image-upload";
 import {
   type Product,
   type ProductInput,
@@ -118,7 +119,7 @@ function Editor({
       for (const f of Array.from(files)) {
         if (f.size > 10 * 1024 * 1024) throw new Error("Ảnh vượt quá 10 MB.");
         const form = new FormData();
-        form.append("image", f);
+        form.append("image", await prepareUpload(f));
         const { id, storage } = await api<{
           id: string;
           storage: "uploadthing" | "local";

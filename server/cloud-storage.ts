@@ -44,6 +44,13 @@ export interface CloudAdapter {
   download(fileKey: string, config: CloudConfig): Promise<Buffer>;
 }
 function encryptionKey(directory: string) {
+  if (process.env.MEDIA_ENCRYPTION_KEY) {
+    if (!/^[a-f0-9]{64}$/i.test(process.env.MEDIA_ENCRYPTION_KEY))
+      throw new CloudStorageError(
+        "MEDIA_ENCRYPTION_KEY phải gồm 64 ký tự hex.",
+      );
+    return Buffer.from(process.env.MEDIA_ENCRYPTION_KEY, "hex");
+  }
   const file = path.join(directory, "media-encryption-key");
   if (!existsSync(file))
     writeFileSync(file, randomBytes(32).toString("hex"), {

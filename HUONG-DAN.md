@@ -2,6 +2,8 @@
 
 Website trưng bày hoa bằng tiếng Việt, không có giá, giỏ hàng hoặc thanh toán. Khách chọn mẫu rồi gọi **0986592394** hoặc liên hệ Facebook **Đinh Thị Hằng**. Shop tại **Chợ Iamron - Ia Pa - Gia Lai**.
 
+Để deploy Vercel với Turso và UploadThing, đọc [DEPLOY-VERCEL.md](DEPLOY-VERCEL.md). Các lệnh vận hành local bên dưới dùng SQLite trên máy và không tự đồng bộ với database cloud.
+
 ## Mở website trên máy này
 
 Website: **http://localhost:4317**. Quản trị: **http://localhost:4317/admin**.
@@ -114,4 +116,4 @@ Phát triển từ Flora Bloom của Themixly: https://github.com/themixlyweb/re
 
 Stack: React 18, TypeScript, Vite, Tailwind CSS, Express, SQLite, Sharp. Dependency Vite, Tailwind và React Router đã được cập nhật khi triển khai để xử lý cảnh báo audit từ template cũ.
 
-Một tài khoản chủ shop; chưa có phân quyền nhân viên, kho, đơn hàng, thanh toán hoặc triển khai public. Font dùng Google Fonts với font dự phòng khi mất mạng. Khi đưa lên Internet cần cấu hình hosting, HTTPS và cookie Secure phù hợp; bản hiện tại được cấu hình cho local HTTP.
+Một tài khoản chủ shop; chưa có phân quyền nhân viên, kho, đơn hàng hoặc thanh toán. Font dùng Google Fonts với font dự phòng khi mất mạng. Bản local dùng HTTP; API Vercel đã có cấu hình cookie Secure và lưu dữ liệu Turso. Trạng thái deployment thực tế xem biên bản kiểm tra.

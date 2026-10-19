@@ -12,6 +12,9 @@
     "admin:setup": "tsx server/cli.ts setup",
     "admin:password": "tsx server/cli.ts password",
     "backup": "tsx server/cli.ts backup",
+    "turso:migrate": "tsx server/turso-cli.ts migrate",
+    "turso:env": "tsx server/turso-cli.ts env",
+    "turso:backup": "tsx server/turso-cli.ts backup",
     "restore": "tsx server/cli.ts restore",
     "seed": "tsx server/seed.ts",
     "test": "tsx --test tests/*.test.ts",
@@ -19,6 +22,7 @@
     "format": "prettier --write server shared tests src/App.tsx src/pages/Store.tsx src/pages/Admin.tsx src/pages/CloudStorage.tsx src/lib/api.ts src/index.css vite.config.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "@radix-ui/react-slot": "^1.2.3",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
