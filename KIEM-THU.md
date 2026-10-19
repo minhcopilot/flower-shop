@@ -1,5 +1,12 @@
 # Kết quả kiểm tra bàn giao — 19/10/2026
 
+## Sửa ảnh giữ chỗ ở lần tải đầu
+
+- Bỏ ảnh template `hero-slide-1.webp` khỏi trang chủ và phần giới thiệu. Khi dữ liệu/ảnh đang tải, hiện trạng thái tải trong khung cố định; chỉ hiện ảnh hoa sau `onLoad`. Có trạng thái trống và nút thử lại nếu tải ảnh lỗi.
+- Kiểm tra trình duyệt bằng cách giữ riêng request `/api/products`, sau đó giữ request ảnh: không có ảnh template trong cả hai giai đoạn; khung hero desktop giữ nguyên 490 × 590,359 px trước/sau tải.
+- Cố ý chặn `/media/*`: hiện lỗi tiếng Việt, không có biểu tượng ảnh hỏng. Bỏ chặn và bấm thử lại: ảnh thật tải thành công. Mobile 375 px không cuộn ngang.
+- Build/TypeScript, lint và diff check đạt. Ảnh bằng chứng: `artifacts/home-first-load-pending.jpg`, `artifacts/home-image-pending.jpg`, `artifacts/home-first-load-fixed.jpg`, `artifacts/home-first-load-fixed-375.jpg`.
+
 - `npm run build`: đạt, bao gồm TypeScript frontend/backend và cấu hình Vite.
 - `npm run lint`: đạt, không lỗi/cảnh báo.
 - `npm test`: 15/15 nhóm kiểm thử đạt; chạy trên database tạm riêng, không sửa dữ liệu shop.

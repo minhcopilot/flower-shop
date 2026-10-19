@@ -344,9 +344,45 @@ main:focus {
   aspect-ratio: 0.83;
   object-fit: cover;
 }
-.template-photo .hero-arch img {
-  object-fit: contain;
-  padding: 20px;
+.shop-photo {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #f2e1df;
+}
+.hero-arch .shop-photo {
+  aspect-ratio: 0.83;
+}
+.story-art .shop-photo {
+  aspect-ratio: 0.95;
+  border-radius: 6px 170px 6px 6px;
+}
+.shop-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.shop-photo .photo-pending {
+  opacity: 0;
+}
+.shop-photo .photo-ready {
+  opacity: 1;
+}
+.photo-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  color: var(--rose);
+  font-size: 13px;
+  background: linear-gradient(145deg, #f6e8e5, #ead0d6);
 }
 .hero-stamp {
   position: absolute;
@@ -1723,6 +1759,9 @@ label > select {
     aspect-ratio: 1.04;
     object-position: center 40%;
   }
+  .hero-arch .shop-photo {
+    aspect-ratio: 1.04;
+  }
   .hero-stamp {
     right: 1px;
     top: 13px;
@@ -1830,6 +1869,9 @@ label > select {
     margin-inline: auto;
   }
   .story-art img {
+    aspect-ratio: 1.05;
+  }
+  .story-art .shop-photo {
     aspect-ratio: 1.05;
   }
   .story-tag {

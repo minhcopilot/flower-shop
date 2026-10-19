@@ -15,7 +15,69 @@ import {
 import type { Product, Category } from "../../shared/schema";
 import { shop } from "../../shared/schema";
 import { api, mediaUrl } from "../lib/api";
-import templateHero from "../assets/hero-slide-1.webp";
+
+function ShopPhoto({
+  id,
+  name,
+  pending,
+  priority = false,
+}: {
+  id?: string;
+  name?: string;
+  pending: boolean;
+  priority?: boolean;
+}) {
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <div
+      className="shop-photo"
+      aria-busy={(!!id && !ready && !failed) || pending}
+    >
+      {id && !failed && (
+        <img
+          key={attempt}
+          src={`${mediaUrl(id)}${attempt ? `?retry=${attempt}` : ""}`}
+          alt={name || "Mẫu hoa của shop"}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          width="700"
+          height="850"
+          className={ready ? "photo-ready" : "photo-pending"}
+          onLoad={() => setReady(true)}
+          onError={() => setFailed(true)}
+        />
+      )}
+      {!ready && (
+        <div className="photo-placeholder" role="status">
+          <Flower2 size={36} strokeWidth={1} aria-hidden="true" />
+          <span>
+            {failed
+              ? "Ảnh tạm thời chưa tải được"
+              : pending || id
+                ? "Đang tải ảnh hoa…"
+                : "Shop đang cập nhật ảnh hoa"}
+          </span>
+          {failed && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                setReady(false);
+                setFailed(false);
+                setAttempt((n) => n + 1);
+              }}
+            >
+              Thử tải lại ảnh
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function useTitle(title: string) {
   useEffect(() => {
@@ -125,8 +187,9 @@ const categoryNames = ["Bó hoa", "Giỏ hoa", "Hoa sinh nhật", "Hoa khai trư
 export function Home() {
   useTitle("Hoa đẹp thay lời muốn nói");
   const { products, categories, loading, error } = useCatalog();
-  const featured = products.filter((p) => p.featured).slice(0, 4);
-  const shown = featured.length ? featured : products.slice(0, 4);
+  const withPhotos = products.filter((p) => p.images.length > 0);
+  const featured = withPhotos.filter((p) => p.featured).slice(0, 4);
+  const shown = featured.length ? featured : withPhotos.slice(0, 4);
   const hero = shown[0];
   return (
     <>
@@ -164,16 +227,14 @@ export function Home() {
             </span>
           </div>
         </div>
-        <div
-          className={`hero-visual ${hero ? "real-photo" : "template-photo"}`}
-        >
+        <div className="hero-visual">
           <div className="hero-arch">
-            <img
-              src={hero ? mediaUrl(hero.images[0]) : templateHero}
-              alt={hero ? hero.name : "Bó hoa minh họa từ template Flora Bloom"}
-              fetchPriority="high"
-              width="700"
-              height="850"
+            <ShopPhoto
+              key={hero?.images[0] || "hero-pending"}
+              id={hero?.images[0]}
+              name={hero?.name}
+              pending={loading}
+              priority
             />
           </div>
           <div className="hero-stamp">
@@ -185,8 +246,13 @@ export function Home() {
             </span>
           </div>
           <div className="hero-caption">
-            <span>{hero ? hero.code : "Ảnh minh họa template"}</span>
-            <span>{hero ? hero.name : "Chờ shop bổ sung ảnh hoa thật"}</span>
+            <span>{hero?.code || "HOA TƯƠI IA PA"}</span>
+            <span>
+              {hero?.name ||
+                (loading
+                  ? "Đang chọn những đóa hoa đẹp…"
+                  : "Gửi hoa · Gửi yêu thương")}
+            </span>
             <ArrowUpRight size={18} />
           </div>
           <span className="vertical-note">
@@ -274,19 +340,12 @@ export function Home() {
       <section className="story-section">
         <div className="shell story-grid">
           <div className="story-art">
-            {products[1] ? (
-              <img
-                src={mediaUrl(products[1].images[0])}
-                alt={products[1].name}
-                loading="lazy"
-              />
-            ) : (
-              <img
-                src={templateHero}
-                alt="Ảnh hoa minh họa từ template"
-                loading="lazy"
-              />
-            )}
+            <ShopPhoto
+              key={withPhotos[1]?.images[0] || "story-pending"}
+              id={withPhotos[1]?.images[0]}
+              name={withPhotos[1]?.name}
+              pending={loading}
+            />
             <span className="story-tag">
               Từ Ia Pa,
               <br />
