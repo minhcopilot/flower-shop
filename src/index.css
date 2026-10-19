@@ -692,8 +692,70 @@ footer {
   align-items: center;
   gap: 8px;
 }
-.mobile-contact {
-  display: none;
+.floating-contact {
+  position: fixed;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.floating-contact a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 28px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px #43263225;
+  transition: transform 160ms ease;
+}
+.floating-contact a:hover {
+  transform: translateY(-2px);
+}
+.floating-phone {
+  background: var(--rose);
+}
+.floating-zalo {
+  background: #0068cf;
+}
+.floating-facebook {
+  background: #165dc0;
+}
+.shop-map {
+  margin-top: 35px;
+}
+.map-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.map-heading h2 {
+  margin-top: 10px;
+}
+.shop-map iframe {
+  display: block;
+  width: 100%;
+  height: 450px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f3e9e4;
+}
+.map-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--rose);
+  font-size: 13px;
 }
 .page-heading {
   text-align: center;
@@ -1811,36 +1873,34 @@ label > select {
   }
   footer {
     padding-top: 32px;
-    margin-bottom: 57px;
+    padding-bottom: 190px;
   }
   .footer-bottom {
     font-size: 8px;
   }
-  .mobile-contact {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    z-index: 25;
-    padding-bottom: env(safe-area-inset-bottom);
-    background: var(--cream);
-    border-top: 1px solid #dac6ca;
-    box-shadow: 0 -4px 20px #43263208;
+  .floating-contact {
+    right: 12px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    gap: 8px;
   }
-  .mobile-contact a {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
+  .floating-contact a {
+    width: 56px;
     min-height: 56px;
-    font-size: 11px;
-    color: var(--rose);
+    padding: 8px 3px;
+    flex-direction: column;
+    gap: 3px;
+    border-radius: 16px;
+    font-size: 9px;
   }
-  .mobile-contact a:first-child {
-    background: var(--rose);
-    color: white;
+  .floating-phone span {
+    font-size: 0;
+  }
+  .floating-phone span::after {
+    content: "Gọi shop";
+    font-size: 9px;
+  }
+  .shop-map iframe {
+    height: 330px;
   }
   .page-heading {
     margin-bottom: 30px;
@@ -2018,6 +2078,85 @@ label > select {
   }
   .result-count {
     font-size: 10px;
+  }
+}
+.storage-intro > div {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  color: var(--rose);
+}
+.storage-intro h2 {
+  margin-bottom: 0;
+  color: var(--ink);
+}
+.storage-intro > p {
+  font-size: 12px;
+  max-width: 750px;
+}
+.storage-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-block: 18px;
+  font-size: 12px;
+  color: var(--rose);
+}
+.storage-note {
+  margin-block: 18px;
+  line-height: 1.8;
+}
+.storage-account {
+  font-size: 12px;
+  margin-top: 15px;
+}
+.storage-count {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border-bottom: 1px solid var(--line);
+  padding-block: 18px;
+  font-size: 12px;
+}
+.storage-count svg {
+  color: var(--rose);
+}
+.storage-count strong {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  font-weight: 500;
+}
+.storage-migrate {
+  margin-top: 20px;
+  white-space: normal;
+  text-align: center;
+}
+.storage-complete {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #42613e;
+  font-size: 12px;
+  margin-top: 20px;
+}
+.storage-section .panel {
+  min-width: 0;
+}
+@media (max-width: 540px) {
+  .tabs button {
+    padding-inline: 10px;
+    font-size: 10px;
+    gap: 6px;
+  }
+  .storage-intro > div {
+    align-items: start;
+  }
+  .storage-intro h2 {
+    font-size: 25px;
+  }
+  .storage-migrate {
+    width: 100%;
   }
 }
 @media (prefers-reduced-motion: reduce) {

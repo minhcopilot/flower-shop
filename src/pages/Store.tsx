@@ -511,10 +511,15 @@ export function FlowerDetail() {
               </p>
             </div>
             <ContactButtons />
-            <p className="detail-address">
+            <a
+              className="detail-address"
+              href={shop.mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
               <MapPin size={16} />
               {shop.address}
-            </p>
+            </a>
           </div>
         </div>
       )}
@@ -555,12 +560,13 @@ export function Contact({ about = false }: { about?: boolean }) {
         </div>
         <div className="contact-info">
           <span className="eyebrow">KẾT NỐI CÙNG SHOP</span>
-          <div>
+          <a href={shop.mapsUrl} target="_blank" rel="noreferrer">
             <MapPin />
             <span>
               Địa chỉ<strong>{shop.address}</strong>
             </span>
-          </div>
+            <ArrowUpRight />
+          </a>
           <a href={`tel:${shop.phone}`}>
             <Phone />
             <span>
@@ -581,6 +587,43 @@ export function Contact({ about = false }: { about?: boolean }) {
           </p>
         </div>
       </div>
+      <section className="shop-map" aria-labelledby="shop-map-title">
+        <div className="map-heading">
+          <div>
+            <span className="eyebrow">HẸN BẠN Ở SHOP</span>
+            <h2 id="shop-map-title">
+              Đường đến <em>góc hoa.</em>
+            </h2>
+          </div>
+          <a
+            className="text-link"
+            href={shop.mapsUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Mở Google Maps <ArrowUpRight size={18} />
+          </a>
+        </div>
+        <iframe
+          title="Bản đồ đến shop - Chợ Iamron, Ia Pa, Gia Lai"
+          src={shop.mapsEmbed}
+          width="600"
+          height="450"
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+        <a
+          className="map-address"
+          href={shop.mapsUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <MapPin size={18} />
+          {shop.address}
+          <ArrowUpRight size={16} />
+        </a>
+      </section>
     </section>
   );
 }

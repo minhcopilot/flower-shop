@@ -86,6 +86,15 @@ export function backupData(dir: string, root = path.resolve("backups")) {
   };
   for (const file of readdirSync(path.join(dest, "uploads")))
     hashes[`uploads/${file}`] = digest(path.join(dest, "uploads", file));
+  if (existsSync(path.join(dir, "media-encryption-key"))) {
+    cpSync(
+      path.join(dir, "media-encryption-key"),
+      path.join(dest, "media-encryption-key"),
+    );
+    hashes["media-encryption-key"] = digest(
+      path.join(dest, "media-encryption-key"),
+    );
+  }
   writeFileSync(
     path.join(dest, "manifest.json"),
     JSON.stringify(
@@ -108,7 +117,11 @@ export function restoreData(dir: string, source: string) {
   if (manifest.version !== 1 || !manifest.hashes["shop.sqlite"])
     throw new Error("Bản sao lưu không hợp lệ.");
   for (const [file, hash] of Object.entries(manifest.hashes)) {
-    if (file !== "shop.sqlite" && !/^uploads\/[a-f0-9-]+\.webp$/.test(file))
+    if (
+      file !== "shop.sqlite" &&
+      file !== "media-encryption-key" &&
+      !/^uploads\/[a-f0-9-]+\.webp$/.test(file)
+    )
       throw new Error("Đường dẫn trong bản sao lưu không hợp lệ.");
     if (digest(path.join(source, file)) !== hash)
       throw new Error("Bản sao lưu bị thay đổi hoặc thiếu tệp: " + file);
@@ -135,6 +148,17 @@ export function restoreData(dir: string, source: string) {
   cpSync(path.join(source, "uploads"), path.join(staging, "uploads"), {
     recursive: true,
   });
+  // Keep this machine's cloud credentials outside backup archives.
+  const encryptionSource = manifest.hashes["media-encryption-key"]
+    ? path.join(source, "media-encryption-key")
+    : path.join(dir, "media-encryption-key");
+  if (existsSync(encryptionSource))
+    cpSync(encryptionSource, path.join(staging, "media-encryption-key"));
+  if (existsSync(path.join(dir, "uploadthing.json")))
+    cpSync(
+      path.join(dir, "uploadthing.json"),
+      path.join(staging, "uploadthing.json"),
+    );
   const clean = new Database(path.join(staging, "shop.sqlite"));
   clean.prepare("DELETE FROM sessions").run();
   clean.close();

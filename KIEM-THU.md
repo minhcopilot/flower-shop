@@ -2,7 +2,7 @@
 
 - `npm run build`: đạt, bao gồm TypeScript frontend/backend và cấu hình Vite.
 - `npm run lint`: đạt, không lỗi/cảnh báo.
-- `npm test`: 9/9 nhóm kiểm thử API đạt; chạy trên database tạm riêng.
+- `npm test`: 15/15 nhóm kiểm thử đạt; chạy trên database tạm riêng, không sửa dữ liệu shop.
 - `npm audit`: 0 lỗ hổng được báo cáo tại thời điểm kiểm tra.
 - `git diff --check`: đạt.
 
@@ -29,6 +29,23 @@ Database, ảnh và phiên đăng nhập tồn tại sau khi đóng/mở lại d
 
 Ảnh giao diện lưu local trong `artifacts/`: `home-1440.jpg`, `home-768.jpg`, `mobile-375.jpg`, `catalog-375.jpg`, `catalog-768.jpg`, `catalog-1440.jpg`, `admin-1440.jpg`, `admin-375.jpg`.
 
-## Phạm vi xác minh
+## Bổ sung UploadThing
+
+- Đã kết nối tài khoản UploadThing bằng token lưu riêng ngoài Git. API quản trị không trả token về trình duyệt.
+- Đã chuyển 9/9 ảnh hiện có lên UploadThing, tải trực tiếp từng tệp từ cloud và so sánh byte ảnh giải mã với WebP local: 9/9 khớp. Mã băm dữ liệu mẫu hoa trước/sau không đổi; giữ nguyên mã mẫu, ảnh đại diện và thứ tự ảnh.
+- Đã thử chọn ảnh từ máy bằng trang quản trị: UploadThing nhận tệp, hiện thông báo thành công và ảnh xem trước. Hủy mẫu thử và dọn riêng tệp thử, giữ nguyên 9 mẫu thật.
+- Đã kiểm tra tab Lưu trữ ảnh: 9 ảnh cloud, 0 ảnh chờ chuyển; không còn trường nguồn Facebook trong form mẫu hoa. Giao diện 375/768/1440 px không cuộn ngang.
+- Kiểm thử tự động bổ sung: nâng schema không mất ảnh cũ, xác thực cấu hình, không lộ token, migration chạy lại an toàn, xử lý lỗi upload, chặn ảnh mẫu ẩn trước khi gọi cloud, mã hóa/giải mã và phát hiện tệp bị sửa, sao lưu khóa đọc ảnh và giữ cấu hình riêng khi khôi phục.
+- Ảnh bằng chứng trong `artifacts/`: `uploadthing-admin.jpg`, `uploadthing-admin-375.jpg`, `uploadthing-upload-success.jpg`; kết quả đối chiếu cloud trong `uploadthing-live-check.json`.
+
+## Bổ sung bản đồ và liên hệ nổi
+
+- Nhúng đúng iframe Google Maps được cung cấp (địa điểm trên Google hiển thị Helen Flower); bản đồ đã tải và hiện điểm đánh dấu trong trình duyệt. Địa chỉ ở trang liên hệ, chi tiết mẫu, dưới bản đồ và chân trang mở cùng địa điểm bằng CID.
+- Header có mục Quản trị. Đã thử mở menu ở 375 px, bấm Quản trị, đến `/admin` và menu tự đóng.
+- Cụm liên hệ nổi bên phải trên cả website và quản trị: gọi `0986592394`, Zalo `https://zalo.me/0986592394`, Facebook đúng hồ sơ chủ shop. Trên điện thoại mỗi nút 56 × 56 px, cách nhau 8 px.
+- Kiểm tra chiều rộng 375/768/1440 px không cuộn ngang; CSP cho phép iframe từ `https://www.google.com`. Build/TypeScript, lint, 15/15 kiểm thử đạt sau thay đổi.
+- Ảnh kiểm tra: `artifacts/contact-map-1440.jpg`, `artifacts/contact-admin-375.jpg`. Chưa thực hiện cuộc gọi hoặc gửi tin nhắn Zalo/Facebook.
+
+## Giới hạn bàn giao local
 
 Bản bàn giao chạy local tại cổng 4317, chưa triển khai Internet. Chưa kiểm tra trên thiết bị điện thoại vật lý hoặc thao tác gọi điện thực tế. Chưa tự động đồng bộ Facebook, không có đơn hàng/thanh toán. Các danh mục giỏ hoa/kệ hoa/khai trương chưa được điền sản phẩm suy đoán; chủ shop bổ sung qua quản trị.

@@ -16,7 +16,7 @@
     "seed": "tsx server/seed.ts",
     "test": "tsx --test tests/*.test.ts",
     "preview": "vite preview",
-    "format": "prettier --write server shared tests src/App.tsx src/pages/Store.tsx src/pages/Admin.tsx src/lib/api.ts src/index.css vite.config.ts"
+    "format": "prettier --write server shared tests src/App.tsx src/pages/Store.tsx src/pages/Admin.tsx src/pages/CloudStorage.tsx src/lib/api.ts src/index.css vite.config.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
@@ -35,6 +35,7 @@
     "react-router-dom": "^7.18.4",
     "sharp": "^0.35.5",
     "tailwind-merge": "^2.6.0",
+    "uploadthing": "^7.7.4",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -67,5 +68,8 @@
   },
   "engines": {
     "node": ">=22.12.0"
+  },
+  "overrides": {
+    "effect": "^3.20.0"
   }
 }

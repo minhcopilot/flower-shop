@@ -15,6 +15,12 @@ export function openDatabase(directory: string) {
     CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY, code TEXT NOT NULL UNIQUE, slug TEXT NOT NULL UNIQUE, body TEXT NOT NULL, updatedAt TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, filename TEXT NOT NULL UNIQUE);
     CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, body TEXT NOT NULL, expires INTEGER NOT NULL);`);
+  const mediaColumns = new Set(
+    (db.pragma("table_info(media)") as { name: string }[]).map((c) => c.name),
+  );
+  for (const column of ["appId", "fileKey"])
+    if (!mediaColumns.has(column))
+      db.exec(`ALTER TABLE media ADD COLUMN ${column} TEXT`);
   return db;
 }
 export type DB = ReturnType<typeof openDatabase>;

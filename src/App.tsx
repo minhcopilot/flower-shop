@@ -15,6 +15,7 @@ import {
   Facebook,
   MapPin,
   ArrowUpRight,
+  MessageCircle,
 } from "lucide-react";
 import { shop } from "../shared/schema";
 import { Home, Catalog, FlowerDetail, Contact, Missing } from "./pages/Store";
@@ -27,7 +28,6 @@ function Layout() {
     setMenu(false);
     window.scrollTo(0, 0);
   }, [location.pathname]);
-  const isAdmin = location.pathname.startsWith("/admin");
   return (
     <>
       <a className="skip-link" href="#main">
@@ -62,6 +62,7 @@ function Layout() {
             <NavLink to="/mau-hoa">Mẫu hoa</NavLink>
             <NavLink to="/gioi-thieu">Về shop</NavLink>
             <NavLink to="/lien-he">Liên hệ</NavLink>
+            <NavLink to="/admin">Quản trị</NavLink>
           </nav>
           <a className="button header-call" href={`tel:${shop.phone}`}>
             <Phone size={16} /> Gọi đặt hoa
@@ -110,10 +111,10 @@ function Layout() {
           </div>
           <div>
             <h3>Ghé shop nhé</h3>
-            <p>
+            <a href={shop.mapsUrl} target="_blank" rel="noreferrer">
               <MapPin size={16} />
               {shop.address}
-            </p>
+            </a>
             <a href={`tel:${shop.phone}`}>
               <Phone size={16} />
               0986 592 394
@@ -131,18 +132,36 @@ function Layout() {
           </Link>
         </div>
       </footer>
-      {!isAdmin && (
-        <div className="mobile-contact">
-          <a href={`tel:${shop.phone}`}>
-            <Phone size={18} />
-            Gọi đặt hoa
-          </a>
-          <a href={shop.facebook} target="_blank" rel="noreferrer">
-            <Facebook size={18} />
-            Liên hệ Facebook
-          </a>
-        </div>
-      )}
+      <aside className="floating-contact" aria-label="Liên hệ nhanh với shop">
+        <a
+          className="floating-phone"
+          href={`tel:${shop.phone}`}
+          aria-label="Gọi shop: 0986 592 394"
+        >
+          <Phone size={21} aria-hidden="true" />
+          <span>0986 592 394</span>
+        </a>
+        <a
+          className="floating-zalo"
+          href={shop.zalo}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Chat Zalo: 0986 592 394"
+        >
+          <MessageCircle size={21} aria-hidden="true" />
+          <span>Zalo</span>
+        </a>
+        <a
+          className="floating-facebook"
+          href={shop.facebook}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Liên hệ Facebook chủ shop"
+        >
+          <Facebook size={21} aria-hidden="true" />
+          <span>Facebook</span>
+        </a>
+      </aside>
     </>
   );
 }

@@ -10,6 +10,16 @@ import path from "node:path";
 import { z } from "zod";
 import { categorySchema, productSchema } from "../shared/schema.js";
 import {
+  createUploadThingAdapter,
+  tokenAppId,
+  CloudStorageError,
+  cloudConfigSchema,
+  loadCloudConfig,
+  saveCloudConfig,
+  type CloudAdapter,
+} from "./cloud-storage.js";
+import type { StorageStatus } from "../shared/storage.js";
+import {
   openDatabase,
   products,
   categories,
@@ -34,7 +44,10 @@ class HttpError extends Error {
 const fail = (status: number, message: string): never => {
   throw new HttpError(status, message);
 };
-export function createApp(directory = path.resolve("data")) {
+export function createApp(
+  directory = path.resolve("data"),
+  storage: CloudAdapter = createUploadThingAdapter(directory),
+) {
   const db = openDatabase(directory);
   const secretPath = path.join(directory, "session-secret");
   if (!existsSync(secretPath))
@@ -47,6 +60,7 @@ export function createApp(directory = path.resolve("data")) {
         directives: {
           "script-src": ["'self'"],
           "img-src": ["'self'", "data:", "blob:"],
+          "frame-src": ["https://www.google.com"],
           "upgrade-insecure-requests": null,
         },
       },
@@ -150,6 +164,64 @@ export function createApp(directory = path.resolve("data")) {
       : next(new HttpError(401, "Vui lòng đăng nhập để quản trị.")),
   );
   app.get("/api/admin/products", (_req, res) => res.json(products(db)));
+  type MediaRow = {
+    id: string;
+    filename: string;
+    appId: string | null;
+    fileKey: string | null;
+  };
+  function storageStatus(): StorageStatus {
+    const config = loadCloudConfig(directory);
+    const usedIds = new Set(products(db).flatMap((p) => p.images));
+    const used = (db.prepare("SELECT * FROM media").all() as MediaRow[]).filter(
+      (m) => usedIds.has(m.id),
+    );
+    return {
+      configured: !!config,
+      appId: (config ? tokenAppId(config.token) : null) || "",
+      cloudImages: used.filter((m) => !!m.fileKey).length,
+      localImages: used.filter((m) => !m.fileKey).length,
+      pendingIds: used.filter((m) => !m.fileKey).map((m) => m.id),
+    };
+  }
+  app.get("/api/admin/storage", (_req, res) => res.json(storageStatus()));
+  app.put("/api/admin/storage", async (req, res) => {
+    const config = cloudConfigSchema.parse(req.body);
+    const otherCloud = db
+      .prepare(
+        "SELECT id FROM media WHERE fileKey IS NOT NULL AND appId != ? LIMIT 1",
+      )
+      .get(tokenAppId(config.token));
+    if (otherCloud)
+      fail(
+        409,
+        "Đã có ảnh trong ứng dụng UploadThing cũ. Hãy dùng token của cùng ứng dụng để ảnh tiếp tục truy cập được.",
+      );
+    await storage.verify(config);
+    saveCloudConfig(directory, config);
+    res.json(storageStatus());
+  });
+  app.post("/api/admin/storage/migrate", async (req, res) => {
+    const { id } = z.object({ id: z.string().uuid() }).strict().parse(req.body);
+    const config = loadCloudConfig(directory);
+    if (!config) fail(409, "Vui lòng kết nối UploadThing trước.");
+    const media = db.prepare("SELECT * FROM media WHERE id=?").get(id) as
+      MediaRow | undefined;
+    if (!media || !products(db).some((p) => p.images.includes(id)))
+      fail(404, "Không tìm thấy ảnh đang được sử dụng.");
+    if (!media!.fileKey) {
+      const bytes = readFileSync(
+        path.join(directory, "uploads", media!.filename),
+      );
+      const fileKey = await storage.upload(bytes, id, config!);
+      db.prepare("UPDATE media SET appId=?,fileKey=? WHERE id=?").run(
+        tokenAppId(config!.token),
+        fileKey,
+        id,
+      );
+    }
+    res.json(storageStatus());
+  });
   app.post("/api/admin/categories", (req, res) => {
     const v = categorySchema.parse(req.body);
     const r = db
@@ -242,8 +314,9 @@ export function createApp(directory = path.resolve("data")) {
       fail(400, "Chỉ nhận ảnh tĩnh JPEG, PNG hoặc WebP.");
     const id = randomUUID(),
       filename = `${id}.webp`;
+    let bytes: Buffer;
     try {
-      await pipeline
+      bytes = await pipeline
         .rotate()
         .resize({
           width: 1600,
@@ -252,26 +325,53 @@ export function createApp(directory = path.resolve("data")) {
           withoutEnlargement: true,
         })
         .webp({ quality: 85 })
-        .toFile(path.join(directory, "uploads", filename));
+        .toBuffer();
     } catch {
       return fail(400, "Không thể xử lý ảnh. Vui lòng chọn ảnh khác.");
     }
-    db.prepare("INSERT INTO media VALUES(?,?)").run(id, filename);
-    res.status(201).json({ id });
+    const config = loadCloudConfig(directory);
+    const fileKey = config ? await storage.upload(bytes, id, config) : null;
+    writeFileSync(path.join(directory, "uploads", filename), bytes);
+    db.prepare(
+      "INSERT INTO media(id,filename,appId,fileKey) VALUES(?,?,?,?)",
+    ).run(
+      id,
+      filename,
+      (config ? tokenAppId(config.token) : null) || null,
+      fileKey,
+    );
+    res.status(201).json({ id, storage: fileKey ? "uploadthing" : "local" });
   });
-  app.get("/media/:id", (req, res) => {
+  app.get("/media/:id", async (req, res) => {
     const id = req.params.id;
     if (!z.string().uuid().safeParse(id).success)
       return fail(404, "Không tìm thấy ảnh.");
-    const media = db
-      .prepare("SELECT filename FROM media WHERE id=?")
-      .get(id) as { filename: string } | undefined;
+    const media = db.prepare("SELECT * FROM media WHERE id=?").get(id) as
+      MediaRow | undefined;
     if (
       !media ||
       (!req.session.admin &&
         !products(db).some((p) => p.visible && p.images.includes(id)))
     )
       fail(404, "Không tìm thấy ảnh.");
+    if (media!.fileKey) {
+      const config = loadCloudConfig(directory);
+      if (config && tokenAppId(config.token) === media!.appId) {
+        try {
+          const bytes = await storage.download(media!.fileKey, config);
+          res
+            .set("Cache-Control", "private, no-store")
+            .type("image/webp")
+            .send(bytes);
+          return;
+        } catch {
+          if (!existsSync(path.join(directory, "uploads", media!.filename)))
+            throw new CloudStorageError(
+              "Ảnh tạm thời không tải được. Vui lòng thử lại.",
+            );
+        }
+      }
+    }
     res
       .set("Cache-Control", "private, no-store")
       .sendFile(path.resolve(directory, "uploads", media!.filename));
@@ -293,6 +393,8 @@ export function createApp(directory = path.resolve("data")) {
       res: express.Response,
       _next: express.NextFunction,
     ) => {
+      if (err instanceof CloudStorageError)
+        return res.status(502).json({ error: err.message });
       if (err instanceof z.ZodError)
         return res
           .status(400)

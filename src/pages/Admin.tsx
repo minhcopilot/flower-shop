@@ -14,7 +14,10 @@ import {
   Layers,
   Eye,
   ExternalLink,
+  CloudUpload,
 } from "lucide-react";
+import CloudStorage from "./CloudStorage";
+import type { StorageStatus } from "../../shared/storage";
 import { api, mediaUrl } from "../lib/api";
 import {
   type Product,
@@ -51,6 +54,13 @@ function Editor({
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [uploadNote, setUploadNote] = useState("");
+  const [cloudReady, setCloudReady] = useState(false);
+  useEffect(() => {
+    api<StorageStatus>("/api/admin/storage")
+      .then((s) => setCloudReady(s.configured))
+      .catch(() => {});
+  }, []);
   const change = <K extends keyof ProductInput>(key: K, v: ProductInput[K]) =>
     setValue((prev) => ({ ...prev, [key]: v }));
   async function save(e: FormEvent) {
@@ -101,6 +111,7 @@ function Editor({
     if (!files) return;
     setUploading(true);
     setError("");
+    setUploadNote("");
     try {
       if (value.images.length + files.length > 12)
         throw new Error("Mỗi mẫu tối đa 12 ảnh.");
@@ -108,11 +119,19 @@ function Editor({
         if (f.size > 10 * 1024 * 1024) throw new Error("Ảnh vượt quá 10 MB.");
         const form = new FormData();
         form.append("image", f);
-        const { id } = await api<{ id: string }>("/api/admin/media", {
+        const { id, storage } = await api<{
+          id: string;
+          storage: "uploadthing" | "local";
+        }>("/api/admin/media", {
           method: "POST",
           body: form,
         });
         setValue((prev) => ({ ...prev, images: [...prev.images, id] }));
+        setUploadNote(
+          storage === "uploadthing"
+            ? "Ảnh đã được tải lên UploadThing. Bấm Lưu mẫu hoa để cập nhật."
+            : "Ảnh đã được lưu trên máy chủ. Kết nối UploadThing ở mục Lưu trữ ảnh để lưu trên cloud.",
+        );
       }
     } catch (e) {
       setError((e as Error).message);
@@ -225,14 +244,6 @@ function Editor({
             )}
           </fieldset>
           <label>
-            Nguồn ảnh Facebook (nếu có)
-            <input
-              type="url"
-              value={value.sourceUrl}
-              onChange={(e) => change("sourceUrl", e.target.value)}
-            />
-          </label>
-          <label>
             Ghi chú bản nháp
             <textarea
               rows={2}
@@ -247,12 +258,23 @@ function Editor({
           <div className="panel">
             <h3>Ảnh mẫu hoa</h3>
             <p className="muted">
+              {cloudReady
+                ? "Ảnh được tối ưu và tải lên UploadThing."
+                : "Ảnh hiện lưu local. Kết nối UploadThing trong mục Lưu trữ ảnh khi muốn dùng cloud."}
+            </p>
+            <p className="muted">
               Ảnh đầu tiên là ảnh đại diện. Tối đa 12 ảnh, 10 MB/ảnh. JPEG, PNG,
               WebP.
             </p>
             <label className={`upload-zone ${uploading ? "disabled" : ""}`}>
               <ImagePlus size={29} />
-              <span>{uploading ? "Đang xử lý ảnh…" : "Chọn ảnh từ máy"}</span>
+              <span>
+                {uploading
+                  ? cloudReady
+                    ? "Đang tải ảnh lên UploadThing…"
+                    : "Đang xử lý ảnh…"
+                  : "Chọn ảnh từ máy hoặc điện thoại"}
+              </span>
               <input
                 type="file"
                 aria-label="Tải ảnh mẫu hoa"
@@ -265,6 +287,11 @@ function Editor({
                 }}
               />
             </label>
+            {uploadNote && (
+              <p className="notice success" role="status">
+                {uploadNote}
+              </p>
+            )}
             <div className="admin-images">
               {value.images.map((id, i) => (
                 <div key={id} className="admin-image">
@@ -483,7 +510,9 @@ export default function Admin() {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [editor, setEditor] = useState<Product | ProductInput | null>(null);
-  const [tab, setTab] = useState<"products" | "categories">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "storage">(
+    "products",
+  );
   const [search, setSearch] = useState("");
   useEffect(() => {
     document.title = "Quản trị | Hoa Tươi Ia Pa";
@@ -685,6 +714,16 @@ export default function Admin() {
                 <Layers size={17} />
                 Danh mục
               </button>
+              <button
+                aria-pressed={tab === "storage"}
+                onClick={() => {
+                  setTab("storage");
+                  setNotice("");
+                }}
+              >
+                <CloudUpload size={17} />
+                Lưu trữ ảnh
+              </button>
             </div>
             {tab === "products" && (
               <button
@@ -699,7 +738,9 @@ export default function Admin() {
               </button>
             )}
           </div>
-          {tab === "categories" ? (
+          {tab === "storage" ? (
+            <CloudStorage />
+          ) : tab === "categories" ? (
             <CategoryManager categories={categories} onRefresh={refresh} />
           ) : (
             <>

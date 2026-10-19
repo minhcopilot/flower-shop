@@ -31,19 +31,21 @@ export const productSchema = z
     featured: z.boolean(),
     visible: z.boolean(),
     available: z.boolean(),
-    sourceUrl: z.union([
-      z.literal(""),
-      z
-        .string()
-        .url()
-        .refine((v) => {
-          const u = new URL(v);
-          return (
-            u.protocol === "https:" &&
-            ["facebook.com", "www.facebook.com"].includes(u.hostname)
-          );
-        }, "Nguồn ảnh phải là liên kết Facebook HTTPS."),
-    ]),
+    sourceUrl: z
+      .union([
+        z.literal(""),
+        z
+          .string()
+          .url()
+          .refine((v) => {
+            const u = new URL(v);
+            return (
+              u.protocol === "https:" &&
+              ["facebook.com", "www.facebook.com"].includes(u.hostname)
+            );
+          }, "Nguồn ảnh phải là liên kết Facebook HTTPS."),
+      ])
+      .default(""),
     draftNote: z.string().trim().max(500),
   })
   .strict()
@@ -69,6 +71,10 @@ export const shop = {
   address: "Chợ Iamron - Ia Pa - Gia Lai",
   phone: "0986592394",
   facebook: "https://www.facebook.com/thihang002224",
+  zalo: "https://zalo.me/0986592394",
+  mapsUrl: "https://www.google.com/maps?cid=16143076200607342447",
+  mapsEmbed:
+    "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d437.6611224279924!2d108.44587090374853!3d13.477759263745378!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x316e5dc6aefc3de3%3A0xe007ba4657435f6f!2sHelen%20Flower!5e0!3m2!1svi!2s!4v1792372189754!5m2!1svi!2s",
 };
 export function slugify(s: string) {
   return s

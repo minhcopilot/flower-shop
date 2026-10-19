@@ -55,7 +55,10 @@ try {
         })
         .webp({ quality: 85 })
         .toFile(path.join(dir, "uploads", filename));
-      db.prepare("INSERT INTO media VALUES(?,?)").run(imageId, filename);
+      db.prepare("INSERT INTO media(id,filename) VALUES(?,?)").run(
+        imageId,
+        filename,
+      );
       const name = names[i] || `Bó hoa mẫu ${i + 1}`;
       saveProduct(
         db,
@@ -85,7 +88,7 @@ try {
         path.resolve("src/assets/hero-slide-1.webp"),
         path.join(dir, "uploads", `${imageId}.webp`),
       );
-      db.prepare("INSERT INTO media VALUES(?,?)").run(
+      db.prepare("INSERT INTO media(id,filename) VALUES(?,?)").run(
         imageId,
         `${imageId}.webp`,
       );

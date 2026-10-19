@@ -41,7 +41,21 @@ Tạm hết hoa: bỏ chọn **Còn nhận đặt**; mẫu vẫn hiện nhưng c
 
 Trong mục **Danh mục**, tạo/sửa/xóa loại hoa hoặc dịp tặng. Danh mục đang có mẫu không xóa được: trước tiên sửa các mẫu để bỏ hoặc chuyển danh mục.
 
-Nguồn Facebook và ghi chú bản nháp chỉ hiển thị trong quản trị. Tên của 9 mẫu ban đầu mô tả theo ảnh, chủ shop có thể sửa lại. Không có đồng bộ Facebook tự động.
+Admin chọn ảnh trực tiếp từ máy hoặc điện thoại, không còn trường nhập nguồn Facebook. Thông tin nguồn của 9 ảnh ban đầu chỉ giữ nội bộ để truy xuất nguồn gốc. Tên mẫu có thể sửa lại; không có đồng bộ Facebook tự động.
+
+## Lưu trữ ảnh bằng UploadThing
+
+Vào **Quản trị → Lưu trữ ảnh** để xem số ảnh đã lưu trên UploadThing và số ảnh còn local. Token đã được cấu hình riêng cho máy này. Khi thêm ảnh trong mẫu hoa, website tối ưu thành WebP và tải lên UploadThing; giữ một bản local cho sao lưu/dự phòng.
+
+Nút **Chuyển ảnh hiện có lên UploadThing** chuyển những ảnh còn local mà không đổi mã mẫu, thứ tự hoặc ảnh đại diện. Có tiến độ; nếu mạng lỗi, có thể bấm lại để tiếp tục những ảnh chưa xong.
+
+Khi đổi token, dán **UPLOADTHING_TOKEN V7** trong mục cấu hình. Không cần nhập Secret Key riêng. Phải dùng token của cùng ứng dụng nếu đã có ảnh cloud. Có thể thay token bằng biến môi trường `UPLOADTHING_TOKEN` khi triển khai; biến này được ưu tiên và khóa chỉnh token qua giao diện.
+
+Token lưu riêng ở `data/uploadthing.json`, không xuất hiện trong API đọc, mã nguồn hoặc Git. Khi cài trên máy mới, cần nhập lại token sau khi khôi phục dữ liệu; backup không chứa token dịch vụ.
+
+Ảnh trên UploadThing được mã hóa AES-256-GCM để bảo vệ cả ảnh của mẫu đang ẩn khi dùng lưu trữ public của gói free. Website lấy và giải mã ảnh qua backend sau khi kiểm tra quyền xem. Trong UploadThing Dashboard các tệp có đuôi `.utenc`, không có thumbnail ảnh; giao diện shop/admin vẫn hiển thị ảnh bình thường. Không sửa hoặc xóa thủ công các tệp đó. Khóa đọc ảnh nằm trong `data/media-encryption-key` và được đưa vào bản sao lưu. Không xóa khóa này.
+
+Hạn mức tùy gói tài khoản UploadThing; website không tự nâng cấp gói. Dùng Dashboard để theo dõi dung lượng. [Tài liệu UploadThing](https://docs.uploadthing.com/api-reference/ut-api).
 
 ## Dữ liệu và sao lưu
 
@@ -53,7 +67,7 @@ Database nằm ở `data\shop.sqlite`, ảnh ở `data\uploads`. Không xóa th�
 npm run backup
 ```
 
-Lệnh in đường dẫn thư mục mới trong `backups\`, chứa database, tất cả ảnh và manifest SHA-256. Chép nguyên thư mục bản sao lưu sang ổ đĩa khác để dự phòng. Bản sao lưu chứa thông tin tài khoản đã băm, vì vậy cần giữ riêng tư. Tệp mật khẩu rõ `owner-access.txt` không được đưa vào bản sao lưu tự động.
+Lệnh in đường dẫn thư mục mới trong `backups\`, chứa database, tất cả ảnh, khóa đọc ảnh cloud (nếu có) và manifest SHA-256. Chép nguyên thư mục bản sao lưu sang ổ đĩa khác để dự phòng. Bản sao lưu chứa thông tin tài khoản đã băm và khóa đọc ảnh, vì vậy cần giữ riêng tư. Tệp mật khẩu rõ `owner-access.txt` và token UploadThing không được đưa vào bản sao lưu tự động.
 
 Khôi phục:
 
